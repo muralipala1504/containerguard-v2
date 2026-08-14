@@ -73,7 +73,7 @@ app.get('/', (req, res) => {
   });
 });
 
-// Health check
+// Health check - simple, no K8s calls
 app.get('/health', (req, res) => {
   res.json({ status: 'healthy', service: 'containerguard-backend' });
 });

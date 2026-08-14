@@ -1,15 +1,46 @@
 const k8s = require('@kubernetes/client-node');
+const fs = require('fs');
+const path = require('path');
+const https = require('https');
 
 class K8sMonitor {
   constructor() {
-    const kc = new k8s.KubeConfig();
-    kc.loadFromDefault();
-    this.api = kc.makeApiClient(k8s.CoreV1Api);
-    this.appsApi = kc.makeApiClient(k8s.AppsV1Api);
+    try {
+      const kc = new k8s.KubeConfig();
+      
+      // Try to load kubeconfig from standard location
+      const kubeconfigPath = path.join(process.env.HOME || '/root', '.kube', 'config');
+      const k3dConfigPath = path.join(process.env.HOME || '/root', '.kube', 'k3d-config');
+      
+      // Check which config file exists
+      if (fs.existsSync(kubeconfigPath)) {
+        kc.loadFromFile(kubeconfigPath);
+      } else if (fs.existsSync(k3dConfigPath)) {
+        kc.loadFromFile(k3dConfigPath);
+      } else {
+        kc.loadFromDefault();
+      }
+      
+      this.api = kc.makeApiClient(k8s.CoreV1Api);
+      this.appsApi = kc.makeApiClient(k8s.AppsV1Api);
+      
+      // Skip SSL verification for dev
+      if (this.api && this.api.defaultClient) {
+        this.api.defaultClient.httpsAgent = new https.Agent({
+          rejectUnauthorized: false
+        });
+      }
+    } catch (error) {
+      console.error('K8s init error:', error.message);
+      this.api = null;
+      this.appsApi = null;
+    }
   }
 
   async getClusterInfo() {
     try {
+      if (!this.api) return { error: 'K8s not initialized' };
+      
       const nodes = await this.api.listNode();
       return {
         nodes: nodes.body.items.length,
@@ -29,6 +60,8 @@ class K8sMonitor {
 
   async getAllPods() {
     try {
+      if (!this.api) return [];
+      
       const pods = await this.api.listPodForAllNamespaces();
       return pods.body.items.map(p => ({
         name: p.metadata.name,

@@ -10,20 +10,17 @@ services:
       - NODE_ENV=development
       - BACKEND_PORT=3001
       - K8S_ENABLED=true
-      - K8S_API_ENDPOINT=https://192.168.217.164:6443
+      - K8S_API_ENDPOINT=https://k3dserver:6443
       - DOCKER_ENABLED=true
       - DOCKER_SOCKET=/var/run/docker.sock
+      - HOME=/root
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ~/.kube:/root/.kube
+      - ~/.kube:/root/.kube:ro
+    extra_hosts:
+      - "k3dserver:192.168.217.164"
     networks:
       - containerguard-net
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3001/health"]
-      interval: 15s
-      timeout: 10s
-      retries: 5
-      start_period: 10s
 
   dashboard:
     build: ./dashboard
@@ -33,16 +30,9 @@ services:
     environment:
       - VITE_API_URL=http://localhost:3001
     depends_on:
-      backend:
-        condition: service_healthy
+      - backend
     networks:
       - containerguard-net
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:5173"]
-      interval: 15s
-      timeout: 10s
-      retries: 5
-      start_period: 10s
 
 networks:
   containerguard-net:
