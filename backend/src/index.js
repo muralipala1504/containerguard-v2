@@ -35,11 +35,13 @@ app.use(cors({
       'http://localhost:3000',
       'http://192.168.217.163:5173',
       'http://127.0.0.1:5173',
-      'http://172.18.0.3:5173'
+      'http://172.18.0.3:5173',
+      'http://192.168.217.163:3001'
     ];
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
+      console.log('CORS blocked:', origin);
       callback(new Error('Not allowed by CORS'), false);
     }
   },

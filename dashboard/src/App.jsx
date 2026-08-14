@@ -1,30 +1,38 @@
 import { useState, useEffect } from 'react'
+import Login from './pages/Login'
+import Dashboard from './pages/Dashboard'
 import './App.css'
 
 function App() {
-  const [status, setStatus] = useState('loading')
-  const [data, setData] = useState(null)
+  const [user, setUser] = useState(null)
+  const [token, setToken] = useState(null)
 
   useEffect(() => {
-    fetch('http://192.168.217.163:3001/health')
-      .then(res => res.json())
-      .then(data => {
-        setStatus('connected')
-        setData(data)
-      })
-      .catch(err => {
-        setStatus('error')
-        console.error('Backend error:', err)
-      })
+    const savedToken = localStorage.getItem('token')
+    const savedUser = localStorage.getItem('user')
+    if (savedToken && savedUser) {
+      setToken(savedToken)
+      setUser(JSON.parse(savedUser))
+    }
   }, [])
 
-  return (
-    <div className="App">
-      <h1>ContainerGuard v2.0</h1>
-      <p>Status: {status}</p>
-      {data && <pre>{JSON.stringify(data, null, 2)}</pre>}
-    </div>
-  )
+  const handleLogin = (userData, authToken) => {
+    setUser(userData)
+    setToken(authToken)
+  }
+
+  const handleLogout = () => {
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
+    setUser(null)
+    setToken(null)
+  }
+
+  if (!user || !token) {
+    return <Login onLogin={handleLogin} />
+  }
+
+  return <Dashboard user={user} token={token} onLogout={handleLogout} />
 }
 
 export default App
