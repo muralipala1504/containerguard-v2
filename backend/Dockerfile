@@ -1,22 +1,18 @@
-FROM node:20-alpine
+FROM python:3.11-slim
 
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Install dependencies
-RUN npm install --production
+COPY . .
 
-# Copy source
-COPY src/ ./src/
+ENV PYTHONUNBUFFERED=1
+ENV BACKEND_PORT=3001
+ENV K8S_ENABLED=true
+ENV DOCKER_ENABLED=true
+ENV HOME=/root
 
-# Expose port
 EXPOSE 3001
 
-# Health check
-HEALTHCHECK --interval=10s --timeout=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3001/health', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})"
-
-# Start server
-CMD ["npm", "start"]
+CMD ["python", "main.py"]
