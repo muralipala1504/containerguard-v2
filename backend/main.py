@@ -5,6 +5,7 @@ import uvicorn
 import os
 from datetime import timedelta
 import asyncio
+import threading
 
 from backend.src.db import init_db
 from backend.src.auth import router as auth_router
@@ -39,11 +40,16 @@ rule_engine = RuleEngine(
     db_path="/app/data/events.db"
 )
 
-# Startup event to start rule engine
-@app.on_event("startup")
-async def startup_event():
-    print("🚀 Starting rule engine on app startup")
-    asyncio.create_task(rule_engine.run_engine())
+# Start rule engine in background thread
+def run_rule_engine():
+    """Run the rule engine in a separate asyncio loop"""
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(rule_engine.run_engine())
+
+engine_thread = threading.Thread(target=run_rule_engine, daemon=True)
+engine_thread.start()
+print("🚀 Rule engine started in background thread")
 
 # Routes
 app.include_router(auth_router, prefix="/api/auth")
