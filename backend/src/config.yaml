@@ -1,11 +1,9 @@
 version: "1.0"
-
 agent:
   name: "containerguard-prod-agent"
   environment: "production"
   log_level: "info"
   check_interval: 30
-
 monitoring:
   docker:
     enabled: true
@@ -14,7 +12,6 @@ monitoring:
     enabled: true
     kubeconfig: "/home/ruser/.kube/config"
     context: "k3d-containerguard-dev"
-
 rules:
   - id: "rule-high-cpu-docker"
     name: "High CPU Alert - Docker"
@@ -27,8 +24,7 @@ rules:
       threshold: 50
     action:
       type: "alert"
-      channels: ["log"]
-
+      channels: ["log", "slack"]
   - id: "rule-restart-exited"
     name: "Auto Restart Exited Containers"
     enabled: true
@@ -40,7 +36,6 @@ rules:
       type: "remediate"
       remediation: "restart_container"
       max_retries: 3
-
   - id: "rule-oom-pod"
     name: "OOM Kill Remediation - K8s"
     enabled: true
@@ -53,12 +48,11 @@ rules:
       remediation: "restart_pod"
       max_retries: 3
       backoff_seconds: 60
-
 webhooks:
   slack:
-    enabled: false
-    url: "https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
-
+    enabled: true
+    url: "https://hooks.slack.com/services/YOUR_WEBHOOK_URL"
 database:
   type: "sqlite"
   path: "/app/data/events.db"
+
