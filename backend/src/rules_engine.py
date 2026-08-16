@@ -25,6 +25,8 @@ class RuleEngine:
                 config = yaml.safe_load(f)
             self.rules = config.get('rules', [])
             logger.info(f"✅ Loaded {len(self.rules)} rules from config")
+            for rule in self.rules:
+                logger.info(f"  - Rule: {rule.get('id')}, enabled={rule.get('enabled')}, action={rule.get('action')}")
         except Exception as e:
             logger.error(f"❌ Error loading config: {e}")
             self.rules = []
@@ -75,7 +77,6 @@ class RuleEngine:
         for rule in self.rules:
             if not rule.get('enabled', False):
                 continue
-            
             try:
                 await self.evaluate_rule(rule)
             except Exception as e:
@@ -90,7 +91,6 @@ class RuleEngine:
         trigger_type = trigger.get('type')
         resource = trigger.get('resource')
         
-        # Evaluate trigger
         triggered = False
         resource_name = None
         
@@ -99,14 +99,20 @@ class RuleEngine:
         elif trigger_type == 'status':
             triggered, resource_name = await self.check_status_trigger(trigger)
         
-        # If triggered, execute action
+        print(f"RULE_DEBUG: {rule_id} triggered={triggered}")
         if triggered:
-            logger.warning(f"🔔 Rule {rule_id} TRIGGERED")
-            await self.execute_action(rule_id, action, resource, resource_name)
+            logger.warning(f"🔔 Rule {rule_id} TRIGGERED - resource={resource}, name={resource_name}")
+            logger.info(f"DEBUG: About to call execute_action with action={action}")
+            try:
+                self.execute_action(rule_id, action, resource, resource_name)
+                logger.info(f"✅ Action executed for rule {rule_id}")
+            except Exception as e:
+                logger.error(f"❌ execute_action failed for rule {rule_id}: {e}", exc_info=True)
+            
             self.log_event(rule_id, 'trigger', resource, resource_name, action.get('type'), 'success', f"Rule {rule_id} triggered")
 
     async def check_metric_trigger(self, trigger):
-        """Check metric-based trigger (CPU, memory, etc)"""
+        """Check metric-based trigger"""
         resource = trigger.get('resource')
         metric = trigger.get('metric')
         operator = trigger.get('operator')
@@ -116,8 +122,6 @@ class RuleEngine:
             containers = self.docker_monitor.get_containers()
             for container in containers:
                 container_name = container.get('name')
-                # Simple CPU check (would need stats API in real implementation)
-                # For now, log as alert
                 if operator == '>' and metric == 'cpu_percent':
                     self.log_event(trigger.get('id', 'unknown'), 'alert', 'container', container_name, 'alert', 'success', f"Container {container_name} monitored")
                     return True, container_name
@@ -125,7 +129,7 @@ class RuleEngine:
         return False, None
 
     async def check_status_trigger(self, trigger):
-        """Check status-based trigger (OOMKilled, CrashLoopBackOff, etc)"""
+        """Check status-based trigger"""
         resource = trigger.get('resource')
         condition = trigger.get('condition')
         
@@ -134,15 +138,23 @@ class RuleEngine:
             for pod in pods:
                 pod_name = pod.get('name')
                 pod_status = pod.get('status', '')
-                # Check for OOMKilled or other conditions
-                if condition in pod_status or condition.lower() in pod_status.lower():
+                if condition.lower() in pod_status.lower():
                     return True, pod_name
+        
+        elif resource == 'container':
+            containers = self.docker_monitor.get_containers()
+            for container in containers:
+                container_name = container.get('name')
+                container_status = container.get('status', '').lower()
+                if condition.lower() in container_status:
+                    return True, container_name
         
         return False, None
 
-    async def execute_action(self, rule_id, action, resource, resource_name):
+    def execute_action(self, rule_id, action, resource, resource_name):
         """Execute remediation or alert action"""
         action_type = action.get('type')
+        logger.info(f"📋 execute_action: action_type={action_type}, resource={resource}, name={resource_name}")
         
         if action_type == 'alert':
             channels = action.get('channels', ['log'])
@@ -152,21 +164,35 @@ class RuleEngine:
         
         elif action_type == 'remediate':
             remediation = action.get('remediation')
+            logger.info(f"🔧 Executing remediation: {remediation}")
             
             if remediation == 'restart_pod':
-                logger.info(f"🔧 Restarting pod {resource_name}")
-                self.log_event(rule_id, 'action', resource, resource_name, 'restart_pod', 'pending', f"Restarting pod {resource_name}")
+                try:
+                    result = self.k8s_monitor.restart_pod(resource_name)
+                    status = 'success' if result.get('success') else 'failed'
+                    logger.info(f"🔧 Pod restart: {resource_name} - {status}")
+                    self.log_event(rule_id, 'action', resource, resource_name, 'restart_pod', status, f"Restarted pod {resource_name}")
+                except Exception as e:
+                    logger.error(f"❌ Failed to restart pod {resource_name}: {e}")
+                    self.log_event(rule_id, 'action', resource, resource_name, 'restart_pod', 'failed', str(e))
             
             elif remediation == 'restart_container':
-                logger.info(f"🔧 Restarting container {resource_name}")
-                self.log_event(rule_id, 'action', resource, resource_name, 'restart_container', 'pending', f"Restarting container {resource_name}")
+                try:
+                    result = self.docker_monitor.restart_container(resource_name)
+                    status = 'success' if result.get('success') else 'failed'
+                    logger.info(f"🔧 Container restart: {resource_name} - {status}")
+                    self.log_event(rule_id, 'action', resource, resource_name, 'restart_container', status, f"Restarted container {resource_name}")
+                except Exception as e:
+                    logger.error(f"❌ Failed to restart container {resource_name}: {e}")
+                    self.log_event(rule_id, 'action', resource, resource_name, 'restart_container', 'failed', str(e))
 
     async def run_engine(self):
         """Main loop - runs every check_interval seconds"""
+        print("🚀 RULE ENGINE STARTED")
         while True:
             try:
                 await self.evaluate_rules()
-                await asyncio.sleep(30)  # Check every 30 seconds
+                await asyncio.sleep(30)
             except Exception as e:
                 logger.error(f"❌ Rule engine error: {e}")
                 await asyncio.sleep(30)

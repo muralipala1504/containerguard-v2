@@ -29,6 +29,18 @@ rules:
       type: "alert"
       channels: ["log"]
 
+  - id: "rule-restart-exited"
+    name: "Auto Restart Exited Containers"
+    enabled: true
+    trigger:
+      type: "status"
+      resource: "container"
+      condition: "exited"
+    action:
+      type: "remediate"
+      remediation: "restart_container"
+      max_retries: 3
+
   - id: "rule-oom-pod"
     name: "OOM Kill Remediation - K8s"
     enabled: true
@@ -49,4 +61,4 @@ webhooks:
 
 database:
   type: "sqlite"
-  path: "/home/ruser/containerguard-v2/data/events.db"
+  path: "/app/data/events.db"

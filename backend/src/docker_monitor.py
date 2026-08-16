@@ -46,3 +46,21 @@ class DockerMonitor:
         except Exception as e:
             print(f"Docker containers error: {str(e)}")
             return []
+
+    def restart_container(self, container_id):
+        """Restart a container by ID"""
+        try:
+            container = self.client.containers.get(container_id)
+            container.restart()
+            return {"success": True, "container_id": container_id, "action": "restart"}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    def stop_container(self, container_id):
+        """Stop a container by ID"""
+        try:
+            container = self.client.containers.get(container_id)
+            container.stop()
+            return {"success": True, "container_id": container_id, "action": "stop"}
+        except Exception as e:
+            return {"success": False, "error": str(e)}

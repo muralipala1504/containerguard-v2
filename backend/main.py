@@ -33,14 +33,17 @@ docker_monitor = DockerMonitor()
 
 # Initialize rule engine
 rule_engine = RuleEngine(
-    config_path="backend/src/config.yaml",
+    config_path="/app/config.yaml",
     docker_monitor=docker_monitor,
     k8s_monitor=k8s_monitor,
     db_path="/app/data/events.db"
 )
 
-# Start rule engine in background
-asyncio.create_task(rule_engine.run_engine())
+# Startup event to start rule engine
+@app.on_event("startup")
+async def startup_event():
+    print("🚀 Starting rule engine on app startup")
+    asyncio.create_task(rule_engine.run_engine())
 
 # Routes
 app.include_router(auth_router, prefix="/api/auth")
