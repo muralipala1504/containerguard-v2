@@ -1,0 +1,52 @@
+version: "1.0"
+
+agent:
+  name: "containerguard-prod-agent"
+  environment: "production"
+  log_level: "info"
+  check_interval: 30
+
+monitoring:
+  docker:
+    enabled: true
+    socket: "/var/run/docker.sock"
+  kubernetes:
+    enabled: true
+    kubeconfig: "/home/ruser/.kube/config"
+    context: "k3d-containerguard-dev"
+
+rules:
+  - id: "rule-high-cpu-docker"
+    name: "High CPU Alert - Docker"
+    enabled: true
+    trigger:
+      type: "metric"
+      resource: "container"
+      metric: "cpu_percent"
+      operator: ">"
+      threshold: 50
+    action:
+      type: "alert"
+      channels: ["log"]
+
+  - id: "rule-oom-pod"
+    name: "OOM Kill Remediation - K8s"
+    enabled: true
+    trigger:
+      type: "status"
+      resource: "pod"
+      condition: "OOMKilled"
+    action:
+      type: "remediate"
+      remediation: "restart_pod"
+      max_retries: 3
+      backoff_seconds: 60
+
+webhooks:
+  slack:
+    enabled: false
+    url: "https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
+
+database:
+  type: "sqlite"
+  path: "/home/ruser/containerguard-v2/data/events.db"

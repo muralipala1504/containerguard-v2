@@ -2,17 +2,12 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-COPY requirements.txt .
+COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
-
-ENV PYTHONUNBUFFERED=1
-ENV BACKEND_PORT=3001
-ENV K8S_ENABLED=true
-ENV DOCKER_ENABLED=true
-ENV HOME=/root
+COPY backend/ ./backend/
+COPY backend/src/ ./src/
 
 EXPOSE 3001
 
-CMD ["python", "main.py"]
+CMD ["python", "-m", "uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "3001"]

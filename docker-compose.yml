@@ -1,36 +1,17 @@
-version: '3.8'
-
 services:
-  backend:
-    build: ./backend
-    container_name: containerguard-backend
+  containerguard-agent:
+    image: containerguard:latest
+    container_name: containerguard-agent
     ports:
       - "3001:3001"
-    environment:
-      - NODE_ENV=development
-      - BACKEND_PORT=3001
-      - K8S_ENABLED=true
-      - K8S_API_ENDPOINT=https://k3dserver:6443
-      - DOCKER_ENABLED=true
-      - DOCKER_SOCKET=/var/run/docker.sock
-      - HOME=/root
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ~/.kube:/root/.kube:ro
-    extra_hosts:
-      - "k3dserver:192.168.217.164"
-    networks:
-      - containerguard-net
-
-  dashboard:
-    build: ./dashboard
-    container_name: containerguard-dashboard
-    ports:
-      - "5173:5173"
+      - /home/ruser/.kube/config:/root/.kube/config:ro
+      - /home/ruser/containerguard-v2/data:/app/data
+      - /home/ruser/containerguard-v2/backend/src/config.yaml:/app/config.yaml:ro
     environment:
-      - VITE_API_URL=http://localhost:3001
-    depends_on:
-      - backend
+      - KUBECONFIG=/root/.kube/config
+    restart: unless-stopped
     networks:
       - containerguard-net
 
