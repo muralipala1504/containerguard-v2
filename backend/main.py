@@ -7,7 +7,7 @@ import logging
 from datetime import datetime
 import os
 
-from backend.src.auth import get_current_user, create_access_token, hash_password, verify_password
+from backend.src.auth import create_access_token, hash_password, verify_password
 from backend.src.docker_monitor import DockerMonitor
 from backend.src.k8s_monitor import K8sMonitor
 from backend.src.rules_engine import RuleEngine
@@ -54,7 +54,7 @@ async def login(email: str, password: str):
     return {"token": token, "email": email}
 
 @app.get("/api/monitoring/docker")
-async def monitoring_docker(current_user = Depends(get_current_user)):
+async def monitoring_docker():
     containers = docker_monitor.get_containers()
     update_container_count(len(containers))
     return {
@@ -68,14 +68,14 @@ async def monitoring_docker(current_user = Depends(get_current_user)):
     }
 
 @app.get("/api/monitoring/k8s")
-async def monitoring_k8s(current_user = Depends(get_current_user)):
+async def monitoring_k8s():
     pods = k8s_monitor.get_all_pods()
     cluster_info = k8s_monitor.get_cluster_info()
     update_pod_count(len(pods))
     return {"clusterInfo": cluster_info, "pods": pods}
 
 @app.get("/api/monitoring/all")
-async def monitoring_all(current_user = Depends(get_current_user)):
+async def monitoring_all():
     containers = docker_monitor.get_containers()
     pods = k8s_monitor.get_all_pods()
     cluster_info = k8s_monitor.get_cluster_info()

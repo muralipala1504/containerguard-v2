@@ -5,7 +5,7 @@ from datetime import datetime
 import asyncio
 import logging
 import requests
-from prometheus_metrics import (
+from backend.src.prometheus_metrics import (
     record_rule_fired, record_remediation_success, record_remediation_failed, record_event
 )
 
