@@ -18,3 +18,6 @@ services:
 networks:
   containerguard-net:
     driver: bridge
+# Add this to the containerguard-agent service ports section
+ports:
+  - "0.0.0.0:3001:3001"
