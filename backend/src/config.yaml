@@ -56,3 +56,13 @@ database:
   type: "sqlite"
   path: "/app/data/events.db"
 
+
+webhooks:
+  slack:
+    enabled: true
+    url: "https://hooks.slack.com/services/YOUR_WEBHOOK_URL"
+  cloud:
+    enabled: true
+    api_url: "http://amla-agent-test:8000"
+    api_key: "adf59c5c-c2c7-4b37-9eb1-fa20ae2f1610"
+    agent_id: "85e82b5e"

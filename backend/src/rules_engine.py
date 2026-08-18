@@ -146,6 +146,17 @@ class RuleEngine:
                     logger.warning(f"🔧 RESTARTED CONTAINER: {resource_name} - {result}")
                     self.log_event(rule_id, 'action', 'container', resource_name, 'restart_container', 'success', result)
                     record_remediation_success('restart_container')
+                    self.post_event_to_cloud({
+                        "id": f"evt-{rule_id}-{int(datetime.now().timestamp())}",
+                        "agent_id": "docker-worker",
+                        "timestamp": datetime.now().isoformat(),
+                        "event_type": "remediation_success",
+                        "resource_type": "container",
+                        "resource_name": resource_name,
+                        "action": "restart_container",
+                        "status": "success",
+                        "message": "Container restarted successfully"
+                    })
                     record_event('remediation_success')
                     if 'slack' in channels:
                         self.send_to_slack(rule_name, resource_name, f"Container restarted successfully", color="success")
@@ -162,6 +173,17 @@ class RuleEngine:
                     logger.warning(f"🔧 RESTARTED POD: {resource_name} - {result}")
                     self.log_event(rule_id, 'action', 'pod', resource_name, 'restart_pod', 'success', result)
                     record_remediation_success('restart_pod')
+                    self.post_event_to_cloud({
+                        "id": f"evt-{rule_id}-{int(datetime.now().timestamp())}",
+                        "agent_id": "docker-worker",
+                        "timestamp": datetime.now().isoformat(),
+                        "event_type": "remediation_success",
+                        "resource_type": "pod",
+                        "resource_name": resource_name,
+                        "action": "restart_pod",
+                        "status": "success",
+                        "message": "Pod restarted successfully"
+                    })
                     record_event('remediation_success')
                     if 'slack' in channels:
                         self.send_to_slack(rule_name, resource_name, f"Pod restarted successfully", color="success")
@@ -182,3 +204,33 @@ class RuleEngine:
             except Exception as e:
                 logger.error(f"❌ Engine error: {e}")
                 await asyncio.sleep(30)
+
+    def post_event_to_cloud(self, event_data):
+        """Post event to cloud API"""
+        logger.warning(f"🌐 POST_EVENT_TO_CLOUD: Sending {event_data.get('id')}")
+        try:
+            cloud_config = self.webhooks.get('cloud', {})
+            if not cloud_config.get('enabled'):
+                logger.warning("🌐 Cloud disabled in config")
+                return False
+            
+            api_url = cloud_config.get('api_url')
+            api_key = cloud_config.get('api_key')
+            
+            if not api_url or not api_key:
+                logger.error("❌ Cloud API not configured")
+                return False
+            
+            url = f"{api_url}/api/events?api_key={api_key}"
+            logger.warning(f"🌐 POST to {url}")
+            response = requests.post(url, json=event_data, timeout=5)
+            
+            if response.status_code == 200:
+                logger.warning(f"✅ Event posted to cloud: {event_data.get('id')}")
+                return True
+            else:
+                logger.error(f"❌ Cloud error: {response.status_code}")
+                return False
+        except Exception as e:
+            logger.error(f"❌ Cloud post failed: {e}")
+            return False
