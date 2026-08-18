@@ -68,3 +68,26 @@ class K8sMonitor:
         except Exception as e:
             print(f"K8s pods error: {str(e)}")
             return []
+
+    def restart_pod(self, pod_name, namespace="default"):
+        """Restart a pod by deleting it (K8s will recreate via controller)"""
+        try:
+            self.v1.delete_namespaced_pod(
+                name=pod_name,
+                namespace=namespace,
+                body=client.V1DeleteOptions(grace_period_seconds=0)
+            )
+            return {"success": True, "pod": pod_name, "namespace": namespace, "action": "restart"}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    def scale_deployment(self, deployment_name, replicas, namespace="default"):
+        """Scale a deployment to N replicas"""
+        try:
+            apps_v1 = client.AppsV1Api()
+            deployment = apps_v1.read_namespaced_deployment(deployment_name, namespace)
+            deployment.spec.replicas = replicas
+            apps_v1.patch_namespaced_deployment(deployment_name, namespace, deployment)
+            return {"success": True, "deployment": deployment_name, "replicas": replicas, "action": "scale"}
+        except Exception as e:
+            return {"success": False, "error": str(e)}

@@ -1,5 +1,6 @@
 services:
   containerguard-agent:
+    build: ./
     image: containerguard:latest
     container_name: containerguard-agent
     ports:
@@ -11,10 +12,12 @@ services:
       - /home/ruser/containerguard-v2/backend/src/config.yaml:/app/config.yaml:ro
     environment:
       - KUBECONFIG=/root/.kube/config
+    extra_hosts:
+      - "amla-agent-test:192.168.217.163"
+      - "k3dserver:192.168.217.164"
     restart: unless-stopped
     networks:
       - containerguard-net
-
 networks:
   containerguard-net:
     driver: bridge
