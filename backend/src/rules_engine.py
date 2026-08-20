@@ -144,7 +144,7 @@ class RuleEngine:
                 try:
                     result = self.docker_monitor.restart_container(resource_name)
                     logger.warning(f"🔧 RESTARTED CONTAINER: {resource_name} - {result}")
-                    self.log_event(rule_id, 'action', 'container', resource_name, 'restart_container', 'success', result)
+                    self.log_event(rule_id, 'action', 'container', resource_name, 'restart_container', 'success', str(result))
                     record_remediation_success('restart_container')
                     self.post_event_to_cloud({
                         "id": f"evt-{rule_id}-{int(datetime.now().timestamp())}",
@@ -171,7 +171,7 @@ class RuleEngine:
                 try:
                     result = self.k8s_monitor.restart_pod(resource_name)
                     logger.warning(f"🔧 RESTARTED POD: {resource_name} - {result}")
-                    self.log_event(rule_id, 'action', 'pod', resource_name, 'restart_pod', 'success', result)
+                    self.log_event(rule_id, 'action', 'pod', resource_name, 'restart_pod', 'success', str(result))
                     record_remediation_success('restart_pod')
                     self.post_event_to_cloud({
                         "id": f"evt-{rule_id}-{int(datetime.now().timestamp())}",
