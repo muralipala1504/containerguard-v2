@@ -145,3 +145,8 @@ backend/__pycache__/
 backend/src/__pycache__/
 venv/
 data/
+nohup.out
+frontend/node_modules/
+frontend/dist/
+frontend/src/assets/*.png
+frontend/src/assets/*.svg
